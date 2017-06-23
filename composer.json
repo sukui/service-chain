@@ -1,0 +1,28 @@
+{
+  "name": "php-lib/service-chain",
+  "repositories": {
+    "packagist": {
+      "type": "composer",
+      "url": "http://packagist.qima-inc.com"
+    }
+  },
+  "require": {
+    "php": ">=5.6"
+  },
+  "autoload": {
+    "psr-4": {
+      "Zan\\Lib\\ServiceChain": "src/"
+    },
+    "classmap": [
+      "src/"
+    ],
+    "files": [
+    ]
+  },
+  "config": {
+    "preferred-install": "dist",
+    "secure-http": false
+  },
+  "minimum-stability": "dev"
+}
+
