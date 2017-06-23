@@ -5,7 +5,7 @@
   },
   "autoload": {
     "psr-4": {
-      "ZanPHP\\Component\\ServiceChain": "src/"
+      "ZanPHP\\Component\\ServiceChain\\": "src/"
     }
   },
   "__": "别名兼容iron依赖",
