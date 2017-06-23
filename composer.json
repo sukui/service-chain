@@ -8,10 +8,9 @@
       "ZanPHP\\Component\\ServiceChain\\": "src/"
     }
   },
-  "__": "别名兼容iron依赖",
   "extra": {
     "branch-alias": {
-      "dev-master": "1.0.x"
+      "dev-master": "1.0.x-dev"
     }
   },
   "config": {
