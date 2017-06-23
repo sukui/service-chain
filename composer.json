@@ -1,23 +1,12 @@
 {
   "name": "zanphp/service-chain",
-  "repositories": {
-    "packagist": {
-      "type": "composer",
-      "url": "http://packagist.qima-inc.com"
-    }
-  },
   "require": {
     "php": ">=5.6"
   },
   "autoload": {
     "psr-4": {
-      "ZanPHP\\SOA\\ServiceChain": "src/"
-    },
-    "classmap": [
-      "src/"
-    ],
-    "files": [
-    ]
+      "ZanPHP\\Component\\ServiceChain": "src/"
+    }
   },
   "config": {
     "preferred-install": "dist",
@@ -25,4 +14,3 @@
   },
   "minimum-stability": "dev"
 }
-
