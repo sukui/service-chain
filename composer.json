@@ -1,5 +1,5 @@
 {
-  "name": "php-lib/service-chain",
+  "name": "zanphp/service-chain",
   "repositories": {
     "packagist": {
       "type": "composer",
@@ -11,7 +11,7 @@
   },
   "autoload": {
     "psr-4": {
-      "Zan\\Lib\\ServiceChain": "src/"
+      "ZanPHP\\SOA\\ServiceChain": "src/"
     },
     "classmap": [
       "src/"

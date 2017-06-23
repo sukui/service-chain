@@ -1,6 +1,6 @@
 <?php
 
-namespace Zan\Lib\ServiceChain;
+namespace ZanPHP\SOA\ServiceChain;
 
 
 class ServiceChain
