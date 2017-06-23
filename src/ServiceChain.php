@@ -19,6 +19,11 @@ class ServiceChain
         }
     }
 
+    public static function getFromRpcCtx()
+    {
+        yield getRpcContext(static::CTX_KEY, null);
+    }
+
     private static function fromEnv()
     {
         $chain = getenv(static::ENV_KEY);
