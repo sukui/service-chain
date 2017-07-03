@@ -5,8 +5,10 @@ namespace ZanPHP\Component\ServiceChain;
 
 class ServiceChain
 {
-    const CFG_KEY = "kdt.X-Service-Chain";
+    const ARG_KEY = "service-chain";
     const ENV_KEY = "KDT_X_SERVICE_CHAIN";
+    const CFG_KEY = "kdt.X-Service-Chain";
+
     const HDR_KEY = "X-Service-Chain";
     const CTX_KEY = "service.chain";
 
@@ -26,6 +28,12 @@ class ServiceChain
 
     private static function fromEnv()
     {
+        $opts = getopt("", [ static::ARG_KEY . "::"]);
+        if ($opts && isset($opts[static::ARG_KEY]) &&
+                $chain = $opts[static::ARG_KEY]) {
+            return $chain;
+        }
+
         $chain = getenv(static::ENV_KEY);
         if ($chain !== false) {
             return $chain;
