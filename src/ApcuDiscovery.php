@@ -16,6 +16,8 @@ class ApcuDiscovery implements ServiceChainDiscovery
 
     private $store;
 
+    private $chainMap;
+
     public function __construct($appName, array $config = [])
     {
         $this->config = $config;
@@ -34,7 +36,8 @@ class ApcuDiscovery implements ServiceChainDiscovery
         $tick = Arr::get($this->config, "watch_store.loop_time", self::WATCH_TICK);
 
         Timer::tick($tick, function() {
-            $this->chainMap->setMap($this->store->getChainKeyMap());
+            $keyMap = $this->store->getChainKeyMap();
+            $this->chainMap->setMap($keyMap);
         });
     }
 

@@ -35,7 +35,7 @@ class EtcdDiscovery implements Subscriber, ServiceChainDiscovery
 
     private $chainMap;
 
-    public function __construct($appName, array $config)
+    public function __construct($appName, array $config = [])
     {
         $this->config = $config;
 
@@ -58,7 +58,7 @@ class EtcdDiscovery implements Subscriber, ServiceChainDiscovery
 
     public function discover()
     {
-        $task = $this->discoveringByEtcd();
+        $task = $this->doDiscover();
         Task::execute($task);
 
         $timeout = Arr::get($this->config, "watch.timeout", self::DEFAULT_WATCH_TIMEOUT);
@@ -76,7 +76,7 @@ class EtcdDiscovery implements Subscriber, ServiceChainDiscovery
         $this->store->setChainKeyMap($this->chainMap->getMap());
     }
 
-    private function discoveringByEtcd()
+    private function doDiscover()
     {
         try {
             $resp = (yield $this->etcdKeyAPI->get($this->watchKey, [
@@ -109,7 +109,7 @@ class EtcdDiscovery implements Subscriber, ServiceChainDiscovery
         }
 
         Timer::after(5000, function() {
-            $task = $this->discoveringByEtcd();
+            $task = $this->doDiscover();
             Task::execute($task);
         });
     }
@@ -171,12 +171,18 @@ class EtcdDiscovery implements Subscriber, ServiceChainDiscovery
     public function onChange(Watcher $watcher, $response)
     {
         if ($response instanceof Error) {
-            sys_error("service chain watch fail:" . $response->__toString());
+            $error = $response;
+            sys_error("service chain watch fail:" . $error->__toString());
+
+            if ($error->errorCode == Error::ErrorCodeEventIndexCleared) {
+                $task = $this->doDiscover();
+                Task::execute($task);
+            }
             return;
         }
 
         // TODO 根据 $response->action 判断
-        // set update create delete
+        // get set update create delete
 
         $flush = false;
 

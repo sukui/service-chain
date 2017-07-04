@@ -23,7 +23,8 @@ class ServiceChainStore
     public function __construct($appName)
     {
         $this->appName = $appName;
-        $this->store = ServerStore::getInstanceBy("service_chain");
+        $by = $appName;
+        $this->store = ServerStore::getInstanceBy($by,"service_chain");
     }
 
     public function getChainKeyMap()
