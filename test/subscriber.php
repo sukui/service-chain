@@ -2,7 +2,7 @@
 
 use Zan\Framework\Foundation\Core\Config;
 use Zan\Framework\Utilities\Types\Arr;
-use ZanPHP\Component\ServiceChain\Subscriber;
+use ZanPHP\Component\ServiceChain\EtcdDiscovery;
 
 
 
@@ -22,5 +22,5 @@ Config::set("registry.etcd.nodes", [
     ],
 ]);
 
-$sub = new Subscriber([], "test-app");
+$sub = new EtcdDiscovery([], "test-app");
 $sub->workByEtcd();

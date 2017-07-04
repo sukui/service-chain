@@ -3,6 +3,8 @@
 namespace ZanPHP\Component\ServiceChain;
 
 
+use Zan\Framework\Foundation\Core\Config;
+
 class ServiceChain
 {
     const ARG_KEY = "service-chain";
@@ -12,6 +14,44 @@ class ServiceChain
     const HDR_KEY = "X-Service-Chain";
     const CTX_KEY = "service.chain";
 
+    /**
+     * @var ServiceChainDiscovery[]
+     */
+    private static $discoveries = [];
+
+    public static function init()
+    {
+        $apps = Config::get("registry.app_names", []);
+        $config = Config::get("service_chain");
+
+        foreach ($apps as $appName) {
+            $discovery = self::makeDiscovery($appName, $config);
+            $discovery->discover();
+
+            self::$discoveries[$appName] = $discovery;
+        }
+    }
+
+    /**
+     * For Dispatch Nova Call
+     * @param string $appName
+     * @param string $scKey
+     * @return array|null list($host, $port) =
+     */
+    public static function getEndpoint($appName, $scKey)
+    {
+        if (isset(self::$discoveries[$appName])) {
+            return self::$discoveries[$appName]->getEndpoint($scKey);
+        } else {
+            $appList = implode(", ", array_keys(self::$discoveries));
+            throw new \InvalidArgumentException("$appName is not in [ $appList ]");
+        }
+    }
+
+    /**
+     * For Iron Only
+     * @return array|false|null|string
+     */
     public static function get()
     {
         if (PHP_SAPI === 'cli') {
@@ -24,6 +64,20 @@ class ServiceChain
     public static function getFromRpcCtx()
     {
         yield getRpcContext(static::CTX_KEY, null);
+    }
+
+    /**
+     * @param $appName
+     * @param array $config
+     * @return ServiceChainDiscovery
+     */
+    private static function makeDiscovery($appName, array $config)
+    {
+        if (isset($_SERVER["WORKER_ID"]) && $_SERVER["WORKER_ID"] !== 0) {
+            return new ApcuDiscovery($appName, $config);
+        } else {
+            return new EtcdDiscovery($appName, $config);
+        }
     }
 
     private static function fromEnv()
