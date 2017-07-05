@@ -35,6 +35,8 @@ class EtcdDiscovery implements Subscriber, ServiceChainDiscovery
 
     private $chainMap;
 
+    private $waitIndex;
+
     public function __construct($appName, array $config = [])
     {
         $this->config = $config;
@@ -49,11 +51,10 @@ class EtcdDiscovery implements Subscriber, ServiceChainDiscovery
         ]);
         $this->etcdKeyAPI = $etcdClient->keysAPI(static::KEY_PREFIX);
 
-        $by = $appName;
 
-        $this->store = ServiceChainStore::getInstanceBy($by, $appName);
+        $this->store = new ServiceChainStore($appName);
 
-        $this->chainMap = ServiceChainMap::getInstanceBy($by, $appName);
+        $this->chainMap = new ServiceChainMap($appName);
     }
 
     public function discover()
@@ -69,11 +70,6 @@ class EtcdDiscovery implements Subscriber, ServiceChainDiscovery
     public function getEndpoint($scKey)
     {
         return $this->chainMap->getEndpoint($scKey);
-    }
-
-    public function flush()
-    {
-        $this->store->setChainKeyMap($this->chainMap->getMap());
     }
 
     private function doDiscover()
@@ -94,7 +90,7 @@ class EtcdDiscovery implements Subscriber, ServiceChainDiscovery
             /** @var Error $error */
             $error = $resp;
             if ($error->index) {
-                $this->store->updateWaitIndex($error->index);
+                $this->updateWaitIndex($error->index);
             }
 
             if (!$error->isKeyNotFound()) {
@@ -129,8 +125,8 @@ class EtcdDiscovery implements Subscriber, ServiceChainDiscovery
             }
         }
 
-        $this->store->updateWaitIndex(max(...$waitIndexList) + 1);
-        $this->flush();
+        $this->updateWaitIndex(max(...$waitIndexList) + 1);
+        $this->store->setChainKeyMap($this->chainMap->getMap());
     }
 
     private function parseServiceChainKeyNode(Node $scKeyNode)
@@ -155,12 +151,12 @@ class EtcdDiscovery implements Subscriber, ServiceChainDiscovery
 
     public function getCurrentIndex()
     {
-        return $this->store->getCurrentIndex();
+        return $this->waitIndex;
     }
 
     public function updateWaitIndex($index)
     {
-        $this->store->updateWaitIndex($index);
+        $this->waitIndex = $index;
     }
 
     /**
@@ -200,7 +196,7 @@ class EtcdDiscovery implements Subscriber, ServiceChainDiscovery
         }
 
         if ($flush) {
-            $this->flush();
+            $this->store->setChainKeyMap($this->chainMap->getMap());
         }
     }
 }

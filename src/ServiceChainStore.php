@@ -3,14 +3,12 @@
 namespace ZanPHP\Component\ServiceChain;
 
 
-use Zan\Framework\Network\ServerManager\ServerStore;
 use Zan\Framework\Utilities\DesignPattern\Singleton;
+use ZanPHP\Component\Cache\APCuStore;
 
 /**
  * Class ServiceChainStore
  * @package ZanPHP\Component\ServiceChain
- *
- * 以后如果将Apcu访问单独封装，直接改这里就好了
  */
 class ServiceChainStore
 {
@@ -23,27 +21,28 @@ class ServiceChainStore
     public function __construct($appName)
     {
         $this->appName = $appName;
-        $by = $appName;
-        $this->store = ServerStore::getInstanceBy($by,"service_chain");
+        // TODO refactor DI
+        // composer 依赖contracts & di
+        $this->store = new APCuStore("service_chain");
     }
 
     public function getChainKeyMap()
     {
-        return $this->store->getServices($this->appName);
+        return $this->store->get($this->appName);
     }
 
     public function setChainKeyMap($keyMap)
     {
-        return $this->store->setServices($this->appName, $keyMap);
+        $this->store->forever($this->appName, $keyMap);
     }
 
     public function getCurrentIndex()
     {
-        return $this->store->getServiceWaitIndex($this->appName);
+        return $this->store->get($this->appName . "_waitIndex");
     }
 
     public function updateWaitIndex($index)
     {
-        $this->store->setServiceWaitIndex($this->appName, $index);
+        $this->store->forever($this->appName . "_waitIndex", $index);
     }
 }

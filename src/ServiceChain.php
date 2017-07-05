@@ -74,7 +74,7 @@ class ServiceChain
     private static function makeDiscovery($appName, array $config)
     {
         if (isset($_SERVER["WORKER_ID"]) && $_SERVER["WORKER_ID"] !== 0) {
-            return new ApcuDiscovery($appName, $config);
+            return new APCuDiscovery($appName, $config);
         } else {
             return new EtcdDiscovery($appName, $config);
         }
