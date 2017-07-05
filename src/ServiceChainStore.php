@@ -4,7 +4,7 @@ namespace ZanPHP\Component\ServiceChain;
 
 
 use Zan\Framework\Utilities\DesignPattern\Singleton;
-use ZanPHP\Component\Cache\APCuStore;
+use ZanPHP\Contracts\Cache\ShareMemoryStore;
 
 /**
  * Class ServiceChainStore
@@ -21,9 +21,8 @@ class ServiceChainStore
     public function __construct($appName)
     {
         $this->appName = $appName;
-        // TODO refactor DI
-        // composer 依赖contracts & di
-        $this->store = new APCuStore("service_chain");
+
+        $this->store = make(ShareMemoryStore::class, ["service_chain"]);
     }
 
     public function getChainKeyMap()
