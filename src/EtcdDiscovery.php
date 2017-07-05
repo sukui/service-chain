@@ -31,15 +31,31 @@ class EtcdDiscovery implements Subscriber, ServiceChainDiscovery
 
     private $etcdKeyAPI;
 
+    private $etcdWatcher;
+
     private $store;
 
     private $chainMap;
 
     private $waitIndex;
 
+    private $isFullUpdate;
+
     public function __construct($appName, array $config = [])
     {
-        $this->config = $config;
+        $defaultConf = [
+            "watch" => [
+                "full_update" => true,
+                "timeout" => self::DEFAULT_WATCH_TIMEOUT,
+            ],
+            "discovery" => [
+                "timeout" => self::DEFAULT_DISCOVER_TIMEOUT,
+            ],
+        ];
+
+        $this->config = Arr::merge($defaultConf, $config);
+
+        $this->isFullUpdate = $this->config["watch"]["full_update"];
 
         $this->appName = $appName;
 
@@ -49,8 +65,10 @@ class EtcdDiscovery implements Subscriber, ServiceChainDiscovery
             "endpoints" => Config::get("registry.etcd.nodes", []),
             "timeout" => static::DEFAULT_TIMEOUT,
         ]);
+
         $this->etcdKeyAPI = $etcdClient->keysAPI(static::KEY_PREFIX);
 
+        $this->etcdWatcher = $this->etcdKeyAPI->watch($this->watchKey, $this);
 
         $this->store = new ServiceChainStore($appName);
 
@@ -61,15 +79,6 @@ class EtcdDiscovery implements Subscriber, ServiceChainDiscovery
     {
         $task = $this->doDiscover();
         Task::execute($task);
-
-        $timeout = Arr::get($this->config, "watch.timeout", self::DEFAULT_WATCH_TIMEOUT);
-        $watcher = $this->etcdKeyAPI->watch($this->watchKey, $this);
-        $watcher->watch([ "timeout" => $timeout ]);
-    }
-
-    public function getEndpoint($scKey)
-    {
-        return $this->chainMap->getEndpoint($scKey);
     }
 
     private function doDiscover()
@@ -77,24 +86,28 @@ class EtcdDiscovery implements Subscriber, ServiceChainDiscovery
         try {
             $resp = (yield $this->etcdKeyAPI->get($this->watchKey, [
                 "recursive" => true,
-                "timeout" => Arr::get($this->config,"discovery.timeout", self::DEFAULT_DISCOVER_TIMEOUT),
+                "timeout" => $this->config["discovery"]["timeout"],
             ]));
 
             if ($resp instanceof Response) {
-                if ($resp->node && $nodes = $resp->node->nodes) {
-                    $this->parseServiceChainKeyNodes($nodes);
+                if ($resp->node && $resp->node->nodes) {
+                    $this->parseServiceChainKeyNodes($resp->node);
                 }
+
+                // 开始 watch
+                $timeout = $this->config["watch"]["timeout"];
+                $this->etcdWatcher->watch([ "timeout" => $timeout ], $this->isFullUpdate);
                 return;
             }
 
             /** @var Error $error */
             $error = $resp;
             if ($error->index) {
-                $this->updateWaitIndex($error->index);
+                $this->updateWaitIndex($error->header->etcdIndex + 1);
             }
 
             if (!$error->isKeyNotFound()) {
-                sys_error("service chain discovery fail:" . $error->__toString());
+                sys_error("service chain discovery fail:" . $error);
             }
         } catch (\Throwable $t) {
             echo_exception($t);
@@ -110,43 +123,9 @@ class EtcdDiscovery implements Subscriber, ServiceChainDiscovery
         });
     }
 
-    /**
-     * @param Node[] $nodes
-     */
-    private function parseServiceChainKeyNodes(array $nodes)
+    public function getEndpoint($scKey)
     {
-        $waitIndexList = [ 0 ];
-        foreach ($nodes as $scKeyNode) {
-            $this->parseServiceChainKeyNode($scKeyNode);
-
-            // TODO 处理最外层 waitIndex ?!
-            if ($scKeyNode->modifiedIndex) {
-                $waitIndexList[] = $scKeyNode->modifiedIndex;
-            }
-        }
-
-        $this->updateWaitIndex(max(...$waitIndexList) + 1);
-        $this->store->setChainKeyMap($this->chainMap->getMap());
-    }
-
-    private function parseServiceChainKeyNode(Node $scKeyNode)
-    {
-        if (!$scKeyNode->dir) {
-            sys_error("service chain: invalid app key `$scKeyNode->key`");
-            return;
-        }
-
-        if (empty($scKeyNode->nodes)) {
-            return;
-        }
-
-        foreach ($scKeyNode->nodes as $serverNode) {
-            if (!$serverNode->dir) {
-                sys_error("service chain: invalid chain key `$serverNode->key`");
-                continue;
-            }
-            $this->chainMap->create($serverNode);
-        }
+        return $this->chainMap->getEndpoint($scKey);
     }
 
     public function getCurrentIndex()
@@ -167,36 +146,93 @@ class EtcdDiscovery implements Subscriber, ServiceChainDiscovery
     public function onChange(Watcher $watcher, $response)
     {
         if ($response instanceof Error) {
-            $error = $response;
-            sys_error("service chain watch fail:" . $error->__toString());
-
-            if ($error->errorCode == Error::ErrorCodeEventIndexCleared) {
-                $task = $this->doDiscover();
-                Task::execute($task);
-            }
             return;
         }
 
-        // TODO 根据 $response->action 判断
-        // get set update create delete
+        if ($this->isFullUpdate) {
+            $this->doFullChange($response);
+        } else {
+            $this->doIncrementalChange($response);
+        }
+    }
 
+    private function doFullChange($response)
+    {
+        $maps = [];
+        if ($response->node && $nodes = $response->node->nodes) {
+            foreach ($nodes as $scKeyNode) {
+                $maps[] = $this->chainMap->parseNodes($scKeyNode);
+            }
+        }
+        $map = Arr::merge(...$maps);
+
+        $this->chainMap->setMap($map);
+        $this->store->setChainKeyMap($map);
+    }
+
+    private function doIncrementalChange($response)
+    {
         $flush = false;
 
-        if ($response->node && !$response->prevNode) {
-            // create
-            $flush = $this->chainMap->create($response->node);
-        } else if ($response->node && $response->prevNode) {
-            // update
-            $flush = $this->chainMap->update($response->node);
-        } else if (!$response->node && $response->prevNode) {
-            // delete
+        if (($response->action === "delete" && $response->node) || (!$response->node && $response->prevNode)) {
             $flush = $this->chainMap->delete($response->node);
-        } else {
-
+        } else if ($response->action === "set" && $response->node && !$response->prevNode) { // create
+            $flush = $this->chainMap->create($response->node);
+        } else if ($response->action === "set" && $response->node && $response->prevNode) { // update
+            $flush = $this->chainMap->update($response->node);
         }
 
         if ($flush) {
             $this->store->setChainKeyMap($this->chainMap->getMap());
+        }
+    }
+
+    /**
+     * for incremental watch
+     * @param Node $appNode
+     */
+    private function parseServiceChainKeyNodes(Node $appNode)
+    {
+        $waitIndexList = [ $this->getCurrentIndex(), $appNode->modifiedIndex ];
+
+        foreach ($appNode->nodes as $scKeyNode) {
+            $this->parseServiceChainKeyNode($scKeyNode);
+            if ($scKeyNode->modifiedIndex) {
+                $waitIndexList[] = $scKeyNode->modifiedIndex;
+            }
+        }
+
+        // 从nodes最大的waitIndex开始监听, ??
+        $this->updateWaitIndex(max(...$waitIndexList) + 1);
+
+        $map = $this->chainMap->getMap();
+        $this->store->setChainKeyMap($map);
+    }
+
+    /**
+     * for incremental watch
+     * @param Node $scKeyNode
+     */
+    private function parseServiceChainKeyNode(Node $scKeyNode)
+    {
+        if (!$scKeyNode->dir) {
+            sys_error("service chain: invalid app key `$scKeyNode->key`: is dir");
+            return;
+        }
+
+        if (empty($scKeyNode->nodes)) {
+            return;
+        }
+
+        foreach ($scKeyNode->nodes as $serverNode) {
+            // $prefix/$app/$key/$ip:$port/...
+            /*
+            if (!$serverNode->dir) {
+                sys_error("service chain: invalid chain key `$serverNode->key`: is dir");
+                continue;
+            }
+            */
+            $this->chainMap->create($serverNode);
         }
     }
 }

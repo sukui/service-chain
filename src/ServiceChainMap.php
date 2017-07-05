@@ -47,16 +47,31 @@ class ServiceChainMap
         }
     }
 
+    /**
+     * for 增量更新
+     * @param $scKeyNode
+     * @return bool
+     */
     public function create($scKeyNode)
     {
         return $this->set($scKeyNode);
     }
 
+    /**
+     * for 增量更新
+     * @param Node $scKeyNode
+     * @return bool
+     */
     public function update(Node $scKeyNode)
     {
         return $this->set($scKeyNode);
     }
 
+    /**
+     * for 增量更新
+     * @param Node $scKeyNode
+     * @return bool
+     */
     public function delete(Node $scKeyNode)
     {
         $tuple =$this->parseNode($scKeyNode);
@@ -93,7 +108,7 @@ class ServiceChainMap
 
         $pos0 = strpos($nodeKeyPath, $this->appName);
         if ($pos0 === false) {
-            sys_error("service chain: invalid chain key `$nodeKeyPath`");
+            // sys_error("service chain: invalid chain key `$nodeKeyPath`");
             return false;
         }
 
@@ -102,7 +117,7 @@ class ServiceChainMap
         $pos1 = strpos($serviceChainKey, "/");
         $pos2 = strpos($serviceChainKey, ":");
         if ($pos1 === false || $pos2 === false || $pos2 < $pos1) {
-            sys_error("service chain: invalid chain key `$nodeKeyPath`");
+            // sys_error("service chain: invalid chain key `$nodeKeyPath`");
             return false;
         }
 
@@ -110,5 +125,46 @@ class ServiceChainMap
         list($ip, $port) = explode(":", $ipPort);
 
         return [$scKey, $ip, intval($port)];
+    }
+
+    /**
+     * for 全量更新
+     * @param Node $scKeyNode
+     * @return array
+     */
+    public function parseNodes(Node $scKeyNode)
+    {
+        if (!$scKeyNode->dir) {
+            // sys_error("service chain: invalid app key `$scKeyNode->key`");
+            return [];
+        }
+
+        if (empty($scKeyNode->nodes)) {
+            return [];
+        }
+
+        $map = [];
+
+        foreach ($scKeyNode->nodes as $serverNode) {
+            /*
+            if (!$serverNode->dir) {
+                sys_error("service chain: invalid chain key `$serverNode->key`");
+                continue;
+            }
+            */
+            $tuple = $this->parseNode($serverNode);
+            if ($tuple === false) {
+                continue;
+            }
+
+            list($scKey, $ip, $port) = $tuple;
+            if (!isset($map[$scKey])) {
+                $map[$scKey] = [];
+            }
+
+            $map[$scKey]["$ip:$port"] = [$ip, $port];
+        }
+
+        return $map;
     }
 }
