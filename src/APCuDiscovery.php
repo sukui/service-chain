@@ -20,7 +20,14 @@ class APCuDiscovery implements ServiceChainDiscovery
 
     public function __construct($appName, array $config = [])
     {
-        $this->config = $config;
+        // 同 config/$env/registry.php
+        $defaultConf = [
+            "watch_store" => [
+                "loop_time" => self::WATCH_TICK,
+            ]
+        ];
+
+        $this->config = Arr::merge($defaultConf, $this->config);
 
         $this->appName = $appName;
 
@@ -31,7 +38,7 @@ class APCuDiscovery implements ServiceChainDiscovery
 
     public function discover()
     {
-        $tick = Arr::get($this->config, "watch_store.loop_time", self::WATCH_TICK);
+        $tick = $this->config["watch_store"]["loop_time"];
 
         Timer::tick($tick, function() {
             $keyMap = $this->store->getChainKeyMap();

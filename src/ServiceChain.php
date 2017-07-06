@@ -4,8 +4,9 @@ namespace ZanPHP\Component\ServiceChain;
 
 
 use Zan\Framework\Foundation\Core\Config;
+use ZanPHP\Contracts\ServiceChain\ServiceChainer;
 
-class ServiceChain
+class ServiceChain implements ServiceChainer
 {
     const ARG_KEY = "service-chain";
     const ENV_KEY = "KDT_X_SERVICE_CHAIN";
@@ -17,61 +18,26 @@ class ServiceChain
     /**
      * @var ServiceChainDiscovery[]
      */
-    private static $discoveries = [];
+    private $discoveries = [];
 
-    public static function init()
+    public function __construct()
     {
+        $registry = Config::get("registry", []);
         $apps = Config::get("registry.app_names", []);
-        $config = Config::get("service_chain");
 
         foreach ($apps as $appName) {
-            $discovery = self::makeDiscovery($appName, $config);
+            $discovery = $this->makeDiscovery($appName, $registry);
             $discovery->discover();
-
-            self::$discoveries[$appName] = $discovery;
+            $this->discoveries[$appName] = $discovery;
         }
-    }
-
-    /**
-     * For Dispatch Nova Call
-     * @param string $appName
-     * @param string $scKey
-     * @return array|null list($host, $port) =
-     */
-    public static function getEndpoint($appName, $scKey)
-    {
-        if (isset(self::$discoveries[$appName])) {
-            return self::$discoveries[$appName]->getEndpoint($scKey);
-        } else {
-            $appList = implode(", ", array_keys(self::$discoveries));
-            throw new \InvalidArgumentException("$appName is not in [ $appList ]");
-        }
-    }
-
-    /**
-     * For Iron Only
-     * @return array|false|null|string
-     */
-    public static function get()
-    {
-        if (PHP_SAPI === 'cli') {
-            return self::fromEnv();
-        } else {
-            return self::fromHeader();
-        }
-    }
-
-    public static function getFromRpcCtx()
-    {
-        yield getRpcContext(static::CTX_KEY, null);
     }
 
     /**
      * @param $appName
-     * @param array $config
+     * @param array $config  同 config/$env/registry.php
      * @return ServiceChainDiscovery
      */
-    private static function makeDiscovery($appName, array $config)
+    private function makeDiscovery($appName, array $config)
     {
         if (isset($_SERVER["WORKER_ID"]) && $_SERVER["WORKER_ID"] !== 0) {
             return new APCuDiscovery($appName, $config);
@@ -80,7 +46,55 @@ class ServiceChain
         }
     }
 
-    private static function fromEnv()
+    /**
+     * For Dispatch Nova Call
+     * @param string $appName
+     * @param string $scKey
+     * @return array|null list($host, $port) = getEndpoint()
+     */
+    public function getEndpoint($appName, $scKey)
+    {
+        if (isset($this->discoveries[$appName])) {
+            return $this->discoveries[$appName]->getEndpoint($scKey);
+        } else {
+            $appList = implode(", ", array_keys($this->discoveries));
+            throw new \InvalidArgumentException("$appName is not in [ $appList ]");
+        }
+    }
+
+    public function getKey($type)
+    {
+        switch($type) {
+            case ServiceChainer::TYPE_HTTP:
+                return static::HDR_KEY;
+            case ServiceChainer::TYPE_TCP:
+                return static::CTX_KEY;
+            default:
+                return null;
+        }
+    }
+
+    public function getValue($type, array $ctx = [])
+    {
+        switch($type) {
+            case ServiceChainer::TYPE_HTTP:
+                return $this->getIgnoreCase(static::HDR_KEY, $ctx);
+            case ServiceChainer::TYPE_TCP:
+                return $this->getIgnoreCase(static::CTX_KEY, $ctx);
+            case ServiceChainer::TYPE_JOB:
+                // PHP_SAPI === 'cli'
+                return $this->fromEnv();
+            default:
+                return null;
+        }
+    }
+
+    public function getFromRpcCtx()
+    {
+        yield getRpcContext(static::CTX_KEY, null);
+    }
+
+    private function fromEnv()
     {
         $opts = getopt("", [ static::ARG_KEY . "::"]);
         if ($opts && isset($opts[static::ARG_KEY]) &&
@@ -101,8 +115,14 @@ class ServiceChain
         return null;
     }
 
-    private static function fromHeader()
+    private function getIgnoreCase($key, array $arr)
     {
-        return isset($_SERVER[static::HDR_KEY]) ? $_SERVER[static::HDR_KEY] : null;
+        if (empty($arr)) {
+            return null;
+        }
+
+        $arr = array_change_key_case($arr, CASE_UPPER);
+        $key = strtoupper($key);
+        return isset($arr[$key]) ? $arr[$key] : null;
     }
 }

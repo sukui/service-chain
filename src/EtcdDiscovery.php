@@ -43,6 +43,7 @@ class EtcdDiscovery implements Subscriber, ServiceChainDiscovery
 
     public function __construct($appName, array $config = [])
     {
+        // 同 config/$env/registry.php
         $defaultConf = [
             "watch" => [
                 "full_update" => true,
