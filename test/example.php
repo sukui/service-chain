@@ -1,11 +1,11 @@
 <?php
 
-namespace ZanPHP\Component\ServiceChain;
+namespace ZanPHP\ServiceChain;
 
 use Zan\Framework\Foundation\Core\Config;
 use Zan\Framework\Foundation\Coroutine\Task;
-use ZanPHP\Component\EtcdClient\V2\EtcdClient;
-use ZanPHP\Component\ServiceChain\EtcdDiscovery;
+use ZanPHP\EtcdClient\V2\EtcdClient;
+use ZanPHP\ServiceChain\EtcdDiscovery;
 
 
 require "/Users/chuxiaofeng/yz_env/webroot/zan-com/tcp-demo/vendor/autoload.php";

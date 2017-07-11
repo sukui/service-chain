@@ -1,10 +1,10 @@
 <?php
 
-namespace ZanPHP\Component\ServiceChain;
+namespace ZanPHP\ServiceChain;
 
 
 use Zan\Framework\Utilities\DesignPattern\Singleton;
-use ZanPHP\Component\EtcdClient\V2\Node;
+use ZanPHP\EtcdClient\V2\Node;
 
 class ServiceChainMap
 {
@@ -13,7 +13,9 @@ class ServiceChainMap
     private $appName;
 
     /**
-     * @var array serviceChainKey => [[ip, port], ]
+     * @var array serviceChainKey => [
+     *      "$ip:$port" => [$ip, $port],
+     * ]
      */
     private $keyMap;
 
@@ -25,9 +27,8 @@ class ServiceChainMap
 
     public function getEndpoint($scKey)
     {
-        if (isset($this->keyMap[$scKey]) &&
-            $endpoints = array_values($this->keyMap[$scKey])) {
-            return $endpoints[array_rand($endpoints)];
+        if (isset($this->keyMap[$scKey])) {
+            return $this->keyMap[$scKey];
         } else {
             return null;
         }

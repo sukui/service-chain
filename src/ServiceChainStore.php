@@ -1,6 +1,6 @@
 <?php
 
-namespace ZanPHP\Component\ServiceChain;
+namespace ZanPHP\ServiceChain;
 
 
 use Zan\Framework\Utilities\DesignPattern\Singleton;
@@ -8,7 +8,7 @@ use ZanPHP\Contracts\Cache\ShareMemoryStore;
 
 /**
  * Class ServiceChainStore
- * @package ZanPHP\Component\ServiceChain
+ * @package ZanPHP\ServiceChain
  */
 class ServiceChainStore
 {
@@ -21,8 +21,7 @@ class ServiceChainStore
     public function __construct($appName)
     {
         $this->appName = $appName;
-
-        $this->store = make(ShareMemoryStore::class, ["service_chain"]);
+        $this->store = make(ShareMemoryStore::class);
     }
 
     public function getChainKeyMap()

@@ -1,11 +1,11 @@
 <?php
 
-namespace ZanPHP\Component\ServiceChain;
+namespace ZanPHP\ServiceChain;
 
 
 interface ServiceChainDiscovery
 {
     public function discover();
 
-    public function getEndpoint($scKey);
+    public function getEndpoints($scKey = null);
 }

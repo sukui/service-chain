@@ -1,19 +1,20 @@
 <?php
 
-namespace ZanPHP\Component\ServiceChain;
+namespace ZanPHP\ServiceChain;
 
 
 use Zan\Framework\Foundation\Core\Config;
+use Zan\Framework\Foundation\Core\Debug;
 use Zan\Framework\Foundation\Coroutine\Task;
 use Zan\Framework\Network\Server\Timer\Timer;
 use Zan\Framework\Utilities\Types\Arr;
 
-use ZanPHP\Component\EtcdClient\V2\Error;
-use ZanPHP\Component\EtcdClient\V2\EtcdClient;
-use ZanPHP\Component\EtcdClient\V2\Node;
-use ZanPHP\Component\EtcdClient\V2\Response;
-use ZanPHP\Component\EtcdClient\V2\Subscriber;
-use ZanPHP\Component\EtcdClient\V2\Watcher;
+use ZanPHP\EtcdClient\V2\Error;
+use ZanPHP\EtcdClient\V2\EtcdClient;
+use ZanPHP\EtcdClient\V2\Node;
+use ZanPHP\EtcdClient\V2\Response;
+use ZanPHP\EtcdClient\V2\Subscriber;
+use ZanPHP\EtcdClient\V2\Watcher;
 
 class EtcdDiscovery implements Subscriber, ServiceChainDiscovery
 {
@@ -78,6 +79,10 @@ class EtcdDiscovery implements Subscriber, ServiceChainDiscovery
 
     public function discover()
     {
+        if (Debug::get()) {
+            sys_echo("service chain discovery by etcd");
+        }
+
         $task = $this->doDiscover();
         Task::execute($task);
     }
@@ -124,9 +129,13 @@ class EtcdDiscovery implements Subscriber, ServiceChainDiscovery
         });
     }
 
-    public function getEndpoint($scKey)
+    public function getEndpoints($scKey = null)
     {
-        return $this->chainMap->getEndpoint($scKey);
+        if ($scKey === null) {
+            return $this->chainMap->getMap();
+        } else {
+            return $this->chainMap->getEndpoint($scKey);
+        }
     }
 
     public function getCurrentIndex()

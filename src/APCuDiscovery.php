@@ -1,8 +1,9 @@
 <?php
 
-namespace ZanPHP\Component\ServiceChain;
+namespace ZanPHP\ServiceChain;
 
 
+use Zan\Framework\Foundation\Core\Debug;
 use Zan\Framework\Network\Server\Timer\Timer;
 use Zan\Framework\Utilities\Types\Arr;
 
@@ -27,7 +28,7 @@ class APCuDiscovery implements ServiceChainDiscovery
             ]
         ];
 
-        $this->config = Arr::merge($defaultConf, $this->config);
+        $this->config = Arr::merge($defaultConf, $config);
 
         $this->appName = $appName;
 
@@ -38,6 +39,10 @@ class APCuDiscovery implements ServiceChainDiscovery
 
     public function discover()
     {
+        if (Debug::get()) {
+            sys_echo("service chain discovery by apcu");
+        }
+
         $tick = $this->config["watch_store"]["loop_time"];
 
         Timer::tick($tick, function() {
@@ -46,8 +51,12 @@ class APCuDiscovery implements ServiceChainDiscovery
         });
     }
 
-    public function getEndpoint($scKey)
+    public function getEndpoints($scKey = null)
     {
-        return $this->chainMap->getEndpoint($scKey);
+        if ($scKey === null) {
+            return $this->chainMap->getMap();
+        } else {
+            return $this->chainMap->getEndpoint($scKey);
+        }
     }
 }

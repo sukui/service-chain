@@ -1,9 +1,12 @@
 <?php
 
-namespace ZanPHP\Component\ServiceChain;
+namespace ZanPHP\ServiceChain;
 
 
 use Zan\Framework\Foundation\Core\Config;
+use ZanPHP\Cache\APCuStore;
+use ZanPHP\Container\Container;
+use ZanPHP\Contracts\Cache\ShareMemoryStore;
 use ZanPHP\Contracts\ServiceChain\ServiceChainer;
 
 class ServiceChain implements ServiceChainer
@@ -22,6 +25,8 @@ class ServiceChain implements ServiceChainer
 
     public function __construct()
     {
+        $this->initShareMemoryStore();
+
         $registry = Config::get("registry", []);
         $apps = Config::get("registry.app_names", []);
 
@@ -29,6 +34,17 @@ class ServiceChain implements ServiceChainer
             $discovery = $this->makeDiscovery($appName, $registry);
             $discovery->discover();
             $this->discoveries[$appName] = $discovery;
+        }
+    }
+
+    private function initShareMemoryStore()
+    {
+        $container = Container::getInstance();
+        if (!$container->has(ShareMemoryStore::class)) {
+            $container->bind(ShareMemoryStore::class, APCuStore::class);
+            $container->when(APCuStore::class)
+                ->needs('$prefix')
+                ->give('service_chain');
         }
     }
 
@@ -50,19 +66,19 @@ class ServiceChain implements ServiceChainer
      * For Dispatch Nova Call
      * @param string $appName
      * @param string $scKey
-     * @return array|null list($host, $port) = getEndpoint()
+     * @return array
      */
-    public function getEndpoint($appName, $scKey)
+    public function getEndpoints($appName, $scKey = null)
     {
         if (isset($this->discoveries[$appName])) {
-            return $this->discoveries[$appName]->getEndpoint($scKey);
+            return $this->discoveries[$appName]->getEndpoints($scKey);
         } else {
             $appList = implode(", ", array_keys($this->discoveries));
             throw new \InvalidArgumentException("$appName is not in [ $appList ]");
         }
     }
 
-    public function getKey($type)
+    public function getChainKey($type)
     {
         switch($type) {
             case ServiceChainer::TYPE_HTTP:
@@ -74,7 +90,7 @@ class ServiceChain implements ServiceChainer
         }
     }
 
-    public function getValue($type, array $ctx = [])
+    public function getChainValue($type, array $ctx = [])
     {
         switch($type) {
             case ServiceChainer::TYPE_HTTP:
