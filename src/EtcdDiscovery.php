@@ -4,7 +4,6 @@ namespace ZanPHP\ServiceChain;
 
 
 use Zan\Framework\Foundation\Core\Config;
-use Zan\Framework\Foundation\Core\Debug;
 use Zan\Framework\Foundation\Coroutine\Task;
 use Zan\Framework\Network\Server\Timer\Timer;
 use Zan\Framework\Utilities\Types\Arr;
@@ -79,10 +78,6 @@ class EtcdDiscovery implements Subscriber, ServiceChainDiscovery
 
     public function discover()
     {
-        if (Debug::get()) {
-            sys_echo("service chain discovery by etcd");
-        }
-
         $task = $this->doDiscover();
         Task::execute($task);
     }
