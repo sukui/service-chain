@@ -48,10 +48,6 @@ class APCuDiscovery implements ServiceChainDiscovery
 
     public function getEndpoints($scKey = null)
     {
-        if ($scKey === null) {
-            return $this->chainMap->getMap();
-        } else {
-            return $this->chainMap->getEndpoint($scKey);
-        }
+        return $this->chainMap->getMap($scKey);
     }
 }

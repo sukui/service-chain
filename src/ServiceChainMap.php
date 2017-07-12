@@ -25,18 +25,17 @@ class ServiceChainMap
         $this->keyMap = [];
     }
 
-    public function getEndpoint($scKey)
+    public function getMap($scKey = null)
     {
+        if ($scKey === null) {
+            return $this->keyMap;
+        }
+
         if (isset($this->keyMap[$scKey])) {
             return $this->keyMap[$scKey];
         } else {
             return null;
         }
-    }
-
-    public function getMap()
-    {
-        return $this->keyMap;
     }
 
     public function setMap($map)

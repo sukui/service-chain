@@ -97,7 +97,7 @@ class EtcdDiscovery implements Subscriber, ServiceChainDiscovery
 
                 // 开始 watch
                 $timeout = $this->config["watch"]["timeout"];
-                $this->etcdWatcher->watch([ "timeout" => $timeout ], $this->isFullUpdate);
+                $this->etcdWatcher->watch([ "timeout" => $timeout ]);
                 return;
             }
 
@@ -126,11 +126,7 @@ class EtcdDiscovery implements Subscriber, ServiceChainDiscovery
 
     public function getEndpoints($scKey = null)
     {
-        if ($scKey === null) {
-            return $this->chainMap->getMap();
-        } else {
-            return $this->chainMap->getEndpoint($scKey);
-        }
+        return $this->chainMap->getMap($scKey);
     }
 
     public function getCurrentIndex()

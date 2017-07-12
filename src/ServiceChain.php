@@ -105,11 +105,6 @@ class ServiceChain implements ServiceChainer
         }
     }
 
-    public function getFromRpcCtx()
-    {
-        yield getRpcContext(static::CTX_KEY, null);
-    }
-
     private function fromEnv()
     {
         $opts = getopt("", [ static::ARG_KEY . "::"]);

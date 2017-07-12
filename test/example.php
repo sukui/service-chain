@@ -4,7 +4,11 @@ namespace ZanPHP\ServiceChain;
 
 use Zan\Framework\Foundation\Core\Config;
 use Zan\Framework\Foundation\Coroutine\Task;
+use ZanPHP\Cache\APCuStore;
+use ZanPHP\Container\Container;
+use ZanPHP\Contracts\Cache\ShareMemoryStore;
 use ZanPHP\EtcdClient\V2\EtcdClient;
+use ZanPHP\EtcdClient\V2\LocalSubscriber;
 use ZanPHP\ServiceChain\EtcdDiscovery;
 
 
@@ -12,6 +16,7 @@ require "/Users/chuxiaofeng/yz_env/webroot/zan-com/tcp-demo/vendor/autoload.php"
 require __DIR__ . "/../vendor/autoload.php";
 require __DIR__ . "/../../etcd-client/vendor/autoload.php";
 require __DIR__ . "/../../contracts/vendor/autoload.php";
+require __DIR__ . "/../../container/vendor/autoload.php";
 require __DIR__ . "/../../cache/vendor/autoload.php";
 
 
@@ -24,21 +29,49 @@ Config::set("registry.etcd.nodes", [
 ]);
 
 
-// TODO
-// 各种 edge case 的测试
-// 1. CURD
-// 2. 401 问题
+
+$container = Container::getInstance();
+$container->bind(ShareMemoryStore::class, APCuStore::class);
+$container->when(APCuStore::class)
+    ->needs('$prefix')
+    ->give('test_');
 
 
-$etcd = new EtcdDiscovery("test-app", [
-    "watch" => [
-        "full_update" => true,
-        "timeout" => 2000,
-    ]
-]);
 
-$etcd->discover();
 
+call_user_func(function() {
+    // http://10.215.20.11:2379/v2/keys/service_chain/app_to_chain_nodes/scrm-customer-base/test_key/10.9.189.90:8011
+    $perfEndpoints = [[
+        "host" => "10.215.20.11",
+        "port" => 2379,
+    ]];
+    $etcdClient = new EtcdClient([
+        "endpoints" => $perfEndpoints,
+        "timeout" => 1000,
+    ]);
+    $prefix = "/service_chain/app_to_chain_nodes";
+    $keysAPI = $etcdClient->keysAPI($prefix);
+
+
+    $watcher = $keysAPI->watch("/scrm-customer-base", new LocalSubscriber(function() {
+        var_dump(func_get_args());
+    }));
+    $watcher->watch([
+        "timeout" => 1000, // long polling timeout
+    ]);
+});
+return;
+
+
+call_user_func(function() {
+    $etcd = new EtcdDiscovery("test-app", [
+        "watch" => [
+            "full_update" => true,
+            "timeout" => 2000,
+        ]
+    ]);
+    $etcd->discover();
+});
 
 
 call_user_func(function() {
