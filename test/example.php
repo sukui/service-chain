@@ -12,7 +12,6 @@ use ZanPHP\EtcdClient\V2\LocalSubscriber;
 use ZanPHP\ServiceChain\EtcdDiscovery;
 
 
-require "/Users/chuxiaofeng/yz_env/webroot/zan-com/tcp-demo/vendor/autoload.php";
 require __DIR__ . "/../vendor/autoload.php";
 require __DIR__ . "/../../etcd-client/vendor/autoload.php";
 require __DIR__ . "/../../contracts/vendor/autoload.php";
@@ -20,10 +19,13 @@ require __DIR__ . "/../../container/vendor/autoload.php";
 require __DIR__ . "/../../cache/vendor/autoload.php";
 
 
+
+define("ETCD_HOST", "xx.xx.xx");
+
 Config::init();
 Config::set("registry.etcd.nodes", [
     [
-        "host" => "etcd-dev.s.qima-inc.com",
+        "host" => ETCD_HOST,
         "port" => 2379,
     ],
 ]);
@@ -40,9 +42,9 @@ $container->when(APCuStore::class)
 
 
 call_user_func(function() {
-    // http://10.215.20.11:2379/v2/keys/service_chain/app_to_chain_nodes/scrm-customer-base/test_key/10.9.189.90:8011
+    // http://xx.xx.xx.xx:2379/v2/keys/service_chain/app_to_chain_nodes/scrm-customer-base/test_key/xx.xx.xx.xx:8011
     $perfEndpoints = [[
-        "host" => "10.215.20.11",
+        "host" => ETCD_HOST,
         "port" => 2379,
     ]];
     $etcdClient = new EtcdClient([
@@ -77,11 +79,11 @@ call_user_func(function() {
 call_user_func(function() {
     $testEndpoints = [
         [
-            "host" => "etcd-dev.s.qima-inc.com",
+            "host" => ETCD_HOST,
             "port" => 2379,
         ],
         [
-            "host" => "etcd-dev.s.qima-inc.com",
+            "host" => ETCD_HOST,
             "port" => 2379,
         ],
     ];
