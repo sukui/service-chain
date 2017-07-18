@@ -94,29 +94,15 @@ class ServiceChain implements ServiceChainer
     {
         switch($type) {
             case ServiceChainer::TYPE_HTTP:
-                $value = $this->getIgnoreCase(static::HDR_KEY, $ctx);
-                break;
+                return $this->getIgnoreCase(static::HDR_KEY, $ctx);
             case ServiceChainer::TYPE_TCP:
-                $value =  $this->getIgnoreCase(static::CTX_KEY, $ctx);
-                break;
+                return $this->getIgnoreCase(static::CTX_KEY, $ctx);
             case ServiceChainer::TYPE_JOB:
                 // PHP_SAPI === 'cli'
-                $value =  $this->fromEnv();
-                break;
+                return $this->fromEnv();
             default:
-                $value = null;
-                break;
+                return null;
         }
-
-        return $this->parserChainValue($value);
-    }
-
-    private function parserChainValue($raw)
-    {
-        if ($raw && preg_match('/^\s*[\[|\{].*[\]|\}\s*$]/',$raw)) {
-            return json_decode($raw,true) ?: [];
-        }
-        return [];
     }
 
     private function fromEnv()
