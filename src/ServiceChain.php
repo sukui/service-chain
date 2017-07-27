@@ -73,8 +73,9 @@ class ServiceChain implements ServiceChainer
         if (isset($this->discoveries[$appName])) {
             return $this->discoveries[$appName]->getEndpoints($scKey);
         } else {
-            $appList = implode(", ", array_keys($this->discoveries));
-            throw new \InvalidArgumentException("$appName is not in [ $appList ]");
+//            $appList = implode(", ", array_keys($this->discoveries));
+//            throw new \InvalidArgumentException("$appName is not in [ $appList ]");
+            return [];
         }
     }
 
