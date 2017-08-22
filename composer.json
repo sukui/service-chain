@@ -3,7 +3,7 @@
   "require": {
     "php": ">=5.6",
     "zanphp/contracts": "dev-master",
-    "zanphp/etcd-client": "dev-master"
+    "zanphp/etcd-client": "dev-laogui"
   },
   "autoload": {
     "psr-4": {
